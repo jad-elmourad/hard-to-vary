@@ -14,19 +14,19 @@ Finally, the program counts the working variations and ranks the explanations. F
 
 ## An example
 
-Take the question: **Why do seasons occur?**
+I'll use Deutsch's example from Chapter 1, “The Reach of Explanations,” of *The Beginning of Infinity*: **Why do seasons occur?**
 
-One explanation is the story of Persephone. She spends part of the year in Hades, Demeter grieves while she's gone, and this accounts for the seasonal cycle.
+One explanation is the story of Persephone. Hades, god of the underworld, kidnaps Persephone. Her mother Demeter eventually negotiates her release under an arrangement that requires Persephone to return to Hades once a year. Whenever Persephone is away, Demeter becomes sad and makes the world cold and bleak.
 
-I might try changing the explanation in a few ways:
+Deutsch's point is that we can change many of the details of this explanation while still accounting for the same observations. For example, I might try variations like:
 
-- Persephone spends five months in Hades instead of six.
-- It's Demeter's son who is taken rather than her daughter.
-- Zeus orders Persephone to return periodically rather than her return depending on the details involving the pomegranate.
+- Persephone escapes instead of being released under an agreement.
+- Something other than a magic seed compels her to return.
+- Some other arrangement causes Persephone to return annually instead of a marriage contract.
 
-The details have changed, but the basic explanatory story can still do the same job. Suppose I find three such variations.
+The details have changed, but the story can still be made to explain the seasonal cycle. Suppose I find three such variations.
 
-Now I try the explanation involving Earth's axial tilt. I might be able to change the stated tilt from 23.4 degrees to 23.5 degrees without substantially affecting the explanation. But if I start making large changes to the geometry while trying to explain the same observations, the explanation stops working. Suppose I find one working variation.
+Now I try the explanation involving Earth's axial tilt. Here the details are much more constrained by what we're trying to explain. Changing the geometry substantially changes what the theory predicts about the seasons. Suppose I only find one working variation.
 
 The program therefore ranks axial tilt as harder to vary: one working variation versus three. That's the entire comparison procedure.
 
@@ -103,3 +103,35 @@ Where I disagree is that I think once we allow this same freedom for HTV, we can
 There are still all the normal problems of human knowledge: maybe I missed a variation, maybe I accepted a bad one, maybe someone else would judge things differently. But those same problems exist when we come up with and judge criticisms.
 
 I don't think either program solves those problems, and I don't think it needs to. That's the part people do.
+
+## Update: responding to criticisms
+
+After posting the first version, several criticisms came up that I initially thought about answering individually. After thinking about them, though, I realized that while they raise different issues, they can all be understood within the same framework. So rather than splitting the discussion across several different criticism threads, I'm adding this section and reposting the submission as version 2.
+
+I don't think these criticisms require changing the program or the main argument above. But they do make one part of the argument worth clarifying: **the program is operating on the user's current understanding of the explanation.**
+
+Dennis showed a case where the program gives the wrong ranking after more variations are entered for the axial-tilt explanation ([#5526](https://veritula.com/ideas/5526)), and another where arbitrary details like an incrementing number of green hats can generate indefinitely many variations ([#5528](https://veritula.com/ideas/5528)). This leads to the related problem that both explanations could have infinitely many variations and therefore appear equally hard to vary ([#5529](https://veritula.com/ideas/5529)). Dennis also pointed out that some variations might represent the *reach* of a good explanation rather than make it worse ([#5530](https://veritula.com/ideas/5530)), while Dirk raised the question of what counts as a variation rather than an entirely different explanation ([#5531](https://veritula.com/ideas/5531)).
+
+I think these concerns can all be looked at within the same framework: the program is operating on the user's current understanding of the explanation.
+
+Take the example of replacing Earth's tilt with the tilt of Mars or another planet from [#5526](https://veritula.com/ideas/5526). If someone thinks they can replace Earth with Mars and the explanation still works as an explanation of Earth's seasons, then yes, according to their current understanding the explanation really is easy to vary.
+
+But someone who properly understands the explanation of how axial tilt creates the seasons knows there's a lot more context. The tilt of Earth matters because of Earth's relationship with the Sun, how the amount and angle of incoming sunlight changes, how that affects heating, and so on. All these parts of the explanation are connected. You can't just replace Earth with Mars while keeping everything else the same and still claim to be explaining Earth's seasons.
+
+My example in the program is obviously just a toy version of the explanation. A proper explanation includes all this context, and I think that's where the real hard-to-vary aspect starts to show. As you understand more of the explanation, you understand why certain details have to be the way they are and can't just be swapped out independently.
+
+The same applies to the green-hat example in [#5528](https://veritula.com/ideas/5528). If wearing one hat, two hats, three hats, etc. is seriously part of my explanation, and I genuinely think all of those are valid variations that make no difference to what is being explained, then yeah, that's a bad explanation. It contains something completely arbitrary that I can vary however I want. That's exactly what I would expect an easy-to-vary explanation to look like.
+
+This also addresses the infinity issue in [#5529](https://veritula.com/ideas/5529). If an explanation really contains something I can vary indefinitely without affecting its ability to explain the phenomenon, then having indefinitely many working variations isn't an accidental problem with the program. It's telling me something about the explanation: it contains an unconstrained part that I can keep changing without consequence.
+
+This is also how I think about the concern in [#5530](https://veritula.com/ideas/5530) that some variations represent reach. If we're explaining Earth's seasons and I replace Earth with Mars, I don't think I've found another working variation of the explanation of Earth's seasons. I've applied the underlying explanation to a different problem. If someone understands those as the same explanation exhibiting reach, that's fine too; the important point is that the user has to understand what explanatory claim is being varied and what phenomenon it's supposed to explain.
+
+The program isn't intended to distinguish a variation from a completely different explanation either, as raised in [#5531](https://veritula.com/ideas/5531). That's something the user has to decide. In fact, I don't see how a program could make that distinction in general without being a general intelligence that actually comprehends the problem situation and the explanations involved.
+
+And people themselves can disagree about what counts as a variation. That's unavoidable because it depends on how they understand the underlying explanatory argument. What looks like a harmless change to me might look to someone with a deeper understanding like a change that completely breaks the explanation.
+
+So I don't think different people getting different results is necessarily a problem. If I understand an explanation poorly, I may think lots of its details can be changed independently. Once I understand more of the connections between those details, I may realize that many of those variations don't actually work. On the other hand, an expert might also know valid ways of varying an explanation that I would never have thought of. The result reflects our current understanding, and that can change as our knowledge changes.
+
+Dennis also points out that the current CLI doesn't let the user revise a variation after entering it ([#5536](https://veritula.com/ideas/5536)) and contrasts this with Veritula, where further input can revise the tentative result ([#5537](https://veritula.com/ideas/5537)). I agree that these judgments need to be revisable. The current program is just a minimal demonstration, so changing your judgment currently means rerunning it. Adding the ability to add, edit, or delete variations and recalculate the ranking is straightforward and doesn't change the decision procedure I'm proposing. If the user's understanding changes, their inputs can change, and the ranking can change with them.
+
+Finally, Dennis asks in [#5534](https://veritula.com/ideas/5534) which variant of the better explanation the user should adopt if several variants still work. I think it's totally fine if we don't currently have an answer. If several variants all seem plausible and we have no way of choosing between them, my guess is that this is exactly the kind of situation where scientific research programs can diverge and follow different threads until we eventually find some differentiating factor between the explanations. The program doesn't need to invent a reason to choose between them when we don't currently have one.
