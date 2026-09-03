@@ -35,10 +35,6 @@ def error(text):
     print(f"{RED}{text}{RESET}")
 
 
-def styled_parameter(name):
-    return f"{YELLOW}<{name}>{RESET}"
-
-
 def divider():
     print(f"\n{DIM}{'-' * 60}{RESET}\n")
 
@@ -71,7 +67,7 @@ def get_choice(prompt, valid_choices):
         if value in valid_choices:
             return value
 
-        error(f"Please enter one of: {', '.join(valid_choices)}.")
+        error(f"Please enter one of: {', '.join(sorted(valid_choices))}.")
 
 
 def get_yes_no(prompt):
@@ -121,6 +117,7 @@ def extract_parameters(text):
 # ------------------------------------------------------------
 # Parameter handling
 # ------------------------------------------------------------
+
 
 def enumerate_values(parameter):
     values = []
@@ -280,8 +277,105 @@ def get_parameterized_count(text):
 
 
 # ------------------------------------------------------------
+# Explanation / variation data helpers
+# ------------------------------------------------------------
+
+
+def recalculate_count(item):
+    total = item["explanation_parameter_count"]
+
+    for variation in item["variations"]:
+        total += variation["count"]
+
+    item["count"] = total
+
+
+def make_variation(text):
+    parameters = extract_parameters(text)
+
+    if parameters:
+        success("Parameterized variation recorded")
+        count = get_parameterized_count(text)
+    else:
+        success("Variation recorded")
+        count = 1
+
+    return {
+        "text": text,
+        "count": count,
+    }
+
+
+def prompt_for_variation(number):
+    text = input(
+        f"{CYAN}{BOLD}Variation {number}:{RESET}\n> "
+    ).strip()
+
+    if not text:
+        return None
+
+    return make_variation(text)
+
+
+def process_explanation_parameters(explanation):
+    if not extract_parameters(explanation):
+        return 0
+
+    print()
+    hint(
+        "This explanation contains parameters. "
+        "Let's count the working variations they represent."
+    )
+
+    count = get_parameterized_count(explanation)
+
+    print()
+    success(
+        f"Explanation represents {format_count(count)} "
+        "working variations through its parameters"
+    )
+
+    return count
+
+
+def create_explanation_item(explanation, collect_initial_variations=True):
+    item = {
+        "explanation": explanation,
+        "variations": [],
+        "explanation_parameter_count": 0,
+        "count": 0,
+    }
+
+    divider()
+    heading("Explanation")
+    print(explanation)
+
+    item["explanation_parameter_count"] = process_explanation_parameters(
+        explanation
+    )
+
+    if collect_initial_variations:
+        if item["explanation_parameter_count"]:
+            print()
+            hint(
+                "You can still enter other distinct ways this explanation "
+                "can vary."
+            )
+            hint(
+                "Don't separately enter cases already covered by the "
+                "parameters above."
+            )
+
+        collect_additional_variations(item)
+
+    recalculate_count(item)
+    return item
+
+
+# ------------------------------------------------------------
 # Explanation collection
 # ------------------------------------------------------------
+
 
 def collect_explanations():
     explanations = []
@@ -294,7 +388,6 @@ def collect_explanations():
         "cures the disease."
     )
     hint("Press Enter when you're done.")
-
     print()
 
     while True:
@@ -310,7 +403,6 @@ def collect_explanations():
             continue
 
         explanations.append(explanation)
-
         success(f"Explanation {len(explanations)} recorded")
         print()
 
@@ -318,104 +410,261 @@ def collect_explanations():
 
 
 # ------------------------------------------------------------
-# Variation collection
+# Variation collection and editing
 # ------------------------------------------------------------
 
-def collect_variations(explanation):
-    variations = []
-    explanation_parameter_count = 0
 
-    divider()
-
-    heading("Explanation")
-    print(explanation)
-
-    # Parameters directly in the explanation
-    if extract_parameters(explanation):
-        print()
-        hint(
-            "This explanation already contains parameters. "
-            "Let's count the working variations they represent."
-        )
-
-        explanation_parameter_count = get_parameterized_count(
-            explanation
-        )
-
-        print()
-        success(
-            f"Explanation already represents "
-            f"{format_count(explanation_parameter_count)} "
-            "working variations"
-        )
-
-        hint(
-            "You can still enter other distinct ways this explanation "
-            "can vary."
-        )
-        hint(
-            "Don't separately enter cases already covered by the "
-            "parameters above."
-        )
-
+def collect_additional_variations(item):
     print()
     heading("Working variations")
-    hint("Enter other variations of this explanation that would still work to explain the same thing.")
-    hint("Tip: use <X>, <Y>, etc. to describe families of variations.")
-    hint(
-        "Example: <X> kg of grass mixed with <Y> kg of wheat "
-        "cures the disease."
-    )
+    hint("Enter variations that would still work to explain the same thing.")
+    hint("Use <X>, <Y>, etc. to describe families of variations.")
     hint("Press Enter when you're done.")
     print()
 
     while True:
-        variation = input(
-            f"{CYAN}{BOLD}Variation {len(variations) + 1}:{RESET}\n> "
-        ).strip()
+        variation = prompt_for_variation(len(item["variations"]) + 1)
 
-        if not variation:
+        if variation is None:
             break
 
-        parameters = extract_parameters(variation)
-
-        if parameters:
-            success("Parameterized variation recorded")
-            count = get_parameterized_count(variation)
-        else:
-            success("Variation recorded")
-            count = 1
-
-        variations.append(
-            {
-                "text": variation,
-                "count": count,
-            }
-        )
-
+        item["variations"].append(variation)
+        recalculate_count(item)
         print()
 
-    total_count = explanation_parameter_count
 
-    for variation in variations:
-        total_count += variation["count"]
+def print_variations(item):
+    if not item["variations"]:
+        hint("No additional variations entered.")
+        return
+
+    for index, variation in enumerate(item["variations"], start=1):
+        print(
+            f"  [{index}] {variation['text']} "
+            f"({format_count(variation['count'])})"
+        )
+
+
+def add_one_variation(item):
+    print()
+    variation = prompt_for_variation(len(item["variations"]) + 1)
+
+    if variation is None:
+        hint("No variation added.")
+        return
+
+    item["variations"].append(variation)
+    recalculate_count(item)
+    success("Variation added")
+
+
+def choose_variation_index(item, action):
+    if not item["variations"]:
+        warning("There are no additional variations to edit or delete.")
+        return None
 
     print()
-    success(
-        f"Total working variations represented: "
-        f"{format_count(total_count)}"
+    print_variations(item)
+    valid = {str(i) for i in range(1, len(item["variations"]) + 1)} | {"0"}
+    choice = get_choice(
+        f"Which variation would you like to {action}? (0 to cancel)",
+        valid,
     )
 
-    return {
-        "variations": variations,
-        "explanation_parameter_count": explanation_parameter_count,
-        "count": total_count,
-    }
+    if choice == "0":
+        return None
+
+    return int(choice) - 1
+
+
+def edit_variation(item):
+    index = choose_variation_index(item, "edit")
+
+    if index is None:
+        return
+
+    current = item["variations"][index]
+    print()
+    hint(f"Current: {current['text']}")
+
+    new_text = ask("Enter the corrected variation (blank to cancel):").strip()
+
+    if not new_text:
+        hint("Edit cancelled.")
+        return
+
+    # Re-run parameter handling because the edited text may have different
+    # parameters or a different number of working values/combinations.
+    item["variations"][index] = make_variation(new_text)
+    recalculate_count(item)
+    success("Variation updated")
+
+
+def delete_variation(item):
+    index = choose_variation_index(item, "delete")
+
+    if index is None:
+        return
+
+    removed = item["variations"].pop(index)
+    recalculate_count(item)
+    success(f"Deleted variation: {removed['text']}")
+
+
+def edit_explanation(item):
+    print()
+    hint(f"Current: {item['explanation']}")
+
+    new_text = ask("Enter the corrected explanation (blank to cancel):").strip()
+
+    if not new_text:
+        hint("Edit cancelled.")
+        return
+
+    item["explanation"] = new_text
+
+    # The explanation's own parameter count belongs to the explanation text,
+    # so recalculate it whenever that text changes. Existing additional
+    # variations are preserved.
+    item["explanation_parameter_count"] = process_explanation_parameters(
+        new_text
+    )
+    recalculate_count(item)
+    success("Explanation updated")
+
+
+def review_explanation(item):
+    while True:
+        divider()
+        heading("Review explanation")
+        print(item["explanation"])
+        print()
+        print(
+            f"Working variations represented: "
+            f"{format_count(item['count'])}"
+        )
+
+        if item["explanation_parameter_count"]:
+            print(
+                "  Explanation parameters: "
+                f"{format_count(item['explanation_parameter_count'])}"
+            )
+
+        print_variations(item)
+
+        print()
+        print("  [1] Continue")
+        print("  [2] Add variation")
+        print("  [3] Edit variation")
+        print("  [4] Delete variation")
+        print("  [5] Edit explanation")
+
+        choice = get_choice("What would you like to do?", {"1", "2", "3", "4", "5"})
+
+        if choice == "1":
+            return
+        if choice == "2":
+            add_one_variation(item)
+        elif choice == "3":
+            edit_variation(item)
+        elif choice == "4":
+            delete_variation(item)
+        elif choice == "5":
+            edit_explanation(item)
+
+
+# ------------------------------------------------------------
+# Final review / explanation-level CRUD
+# ------------------------------------------------------------
+
+
+def print_explanation_list(results):
+    print()
+    for index, item in enumerate(results, start=1):
+        print(
+            f"  [{index}] {item['explanation']} "
+            f"({format_count(item['count'])} working variations)"
+        )
+
+
+def choose_explanation_index(results, action, allow_cancel=True):
+    print_explanation_list(results)
+
+    valid = {str(i) for i in range(1, len(results) + 1)}
+    if allow_cancel:
+        valid.add("0")
+
+    suffix = " (0 to cancel)" if allow_cancel else ""
+    choice = get_choice(
+        f"Which explanation would you like to {action}?{suffix}",
+        valid,
+    )
+
+    if allow_cancel and choice == "0":
+        return None
+
+    return int(choice) - 1
+
+
+def add_explanation(results):
+    print()
+    explanation = ask("Enter the new explanation:").strip()
+
+    if not explanation:
+        hint("No explanation added.")
+        return
+
+    item = create_explanation_item(explanation, collect_initial_variations=True)
+    review_explanation(item)
+    results.append(item)
+    success("Explanation added")
+
+
+def delete_explanation(results):
+    if len(results) <= 2:
+        warning("At least two explanations are required.")
+        return
+
+    index = choose_explanation_index(results, "delete")
+
+    if index is None:
+        return
+
+    removed = results.pop(index)
+    success(f"Deleted explanation: {removed['explanation']}")
+
+
+def final_review(results):
+    while True:
+        divider()
+        heading("Ready to rank")
+        print_explanation_list(results)
+
+        print()
+        print("  [1] Show ranking")
+        print("  [2] Review / edit an explanation")
+        print("  [3] Add explanation")
+        print("  [4] Delete explanation")
+
+        choice = get_choice("What would you like to do?", {"1", "2", "3", "4"})
+
+        if choice == "1":
+            return
+
+        if choice == "2":
+            index = choose_explanation_index(results, "review")
+            if index is not None:
+                review_explanation(results[index])
+        elif choice == "3":
+            add_explanation(results)
+        elif choice == "4":
+            delete_explanation(results)
 
 
 # ------------------------------------------------------------
 # Ranking
 # ------------------------------------------------------------
+
 
 def show_ranking(results):
     ranked = sorted(
@@ -424,7 +673,6 @@ def show_ranking(results):
     )
 
     divider()
-
     heading("HARDNESS-TO-VARY RANKING")
 
     previous_count = None
@@ -473,6 +721,7 @@ def show_ranking(results):
 # Main
 # ------------------------------------------------------------
 
+
 def main():
     print()
     heading("Hard-to-Vary Explanation Comparator")
@@ -485,25 +734,19 @@ def main():
     success("Question recorded")
 
     explanations = collect_explanations()
-
     results = []
 
     for explanation in explanations:
-        collected = collect_variations(explanation)
-
-        results.append(
-            {
-                "explanation": explanation,
-                "variations": collected["variations"],
-                "explanation_parameter_count": collected[
-                    "explanation_parameter_count"
-                ],
-                "count": collected["count"],
-            }
+        item = create_explanation_item(
+            explanation,
+            collect_initial_variations=True,
         )
+        review_explanation(item)
+        results.append(item)
+
+    final_review(results)
 
     divider()
-
     heading("Question")
     print(question)
 
