@@ -10,6 +10,10 @@ I think hard-to-vary can be implemented more simply than the approaches consider
 
 The program starts by asking the user what question they're trying to answer and then asks for a list of proposed explanations. It goes through each explanation one at a time and asks the user to come up with variations of it that would still work as explanations. The user can enter as many as they can find, then move on to the next explanation.
 
+Variations can either be entered individually or parameterized using notation like `<X>` and `<Y>`. For example, `<X> kg of grass mixed with <Y> kg of wheat cures the disease` can represent a whole family of variations. The user can either enter how many working values or combinations the parameters have, including an infinite number, or enumerate them and let the program count. This avoids requiring the user to manually enter every member of a family of variations.
+
+The user can also review and revise their inputs before the final ranking by adding, editing, or deleting explanations and variations.
+
 Finally, the program counts the working variations and ranks the explanations. Fewer working variations means harder to vary, while equal numbers mean equally hard to vary. So if explanation A has two working variations and explanation B has five, A is harder to vary than B.
 
 ## An example
