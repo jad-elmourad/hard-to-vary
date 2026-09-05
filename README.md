@@ -16,6 +16,8 @@ The user can also review and revise their inputs before the final ranking by add
 
 Finally, the program counts the working variations and ranks the explanations. Fewer working variations means harder to vary, while equal numbers mean equally hard to vary. So if explanation A has two working variations and explanation B has five, A is harder to vary than B.
 
+Infinite variations need a little more information. If two explanations both have infinitely many working variations, the program first compares how many independently variable parameters have infinitely many possible values. Fewer infinitely-variable parameters means harder to vary. If that's also equal, it compares the remaining finite parts of the variations. This lets the program distinguish, for example, between an explanation with one unconstrained infinite parameter and another with two.
+
 ## An example
 
 I'll use Deutsch's example from Chapter 1, “The Reach of Explanations,” of *The Beginning of Infinity*: **Why do seasons occur?**
@@ -135,7 +137,5 @@ The program isn't intended to distinguish a variation from a completely differen
 And people themselves can disagree about what counts as a variation. That's unavoidable because it depends on how they understand the underlying explanatory argument. What looks like a harmless change to me might look to someone with a deeper understanding like a change that completely breaks the explanation.
 
 So I don't think different people getting different results is necessarily a problem. If I understand an explanation poorly, I may think lots of its details can be changed independently. Once I understand more of the connections between those details, I may realize that many of those variations don't actually work. On the other hand, an expert might also know valid ways of varying an explanation that I would never have thought of. The result reflects our current understanding, and that can change as our knowledge changes.
-
-Dennis also points out that the current CLI doesn't let the user revise a variation after entering it ([#5536](https://veritula.com/ideas/5536)) and contrasts this with Veritula, where further input can revise the tentative result ([#5537](https://veritula.com/ideas/5537)). I agree that these judgments need to be revisable. The current program is just a minimal demonstration, so changing your judgment currently means rerunning it. Adding the ability to add, edit, or delete variations and recalculate the ranking is straightforward and doesn't change the decision procedure I'm proposing. If the user's understanding changes, their inputs can change, and the ranking can change with them.
 
 Finally, Dennis asks in [#5534](https://veritula.com/ideas/5534) which variant of the better explanation the user should adopt if several variants still work. I think it's totally fine if we don't currently have an answer. If several variants all seem plausible and we have no way of choosing between them, my guess is that this is exactly the kind of situation where scientific research programs can diverge and follow different threads until we eventually find some differentiating factor between the explanations. The program doesn't need to invent a reason to choose between them when we don't currently have one.

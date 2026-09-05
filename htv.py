@@ -198,11 +198,41 @@ def enumerate_combinations(parameters):
     return len(combinations)
 
 
-def get_parameterized_count(text):
+def finite_factor_from_counts(counts):
+    finite_counts = [count for count in counts if not math.isinf(count)]
+
+    if not finite_counts:
+        return 0
+
+    factor = math.prod(finite_counts)
+    return factor if factor > 1 else 0
+
+
+def get_bounded_positive_int(prompt, maximum):
+    while True:
+        value = ask(prompt).strip()
+
+        try:
+            count = int(value)
+        except ValueError:
+            error(f"Please enter a whole number from 1 to {maximum}.")
+            continue
+
+        if 1 <= count <= maximum:
+            return count
+
+        error(f"Please enter a whole number from 1 to {maximum}.")
+
+
+def get_parameterized_metrics(text):
     parameters = extract_parameters(text)
 
     if not parameters:
-        return 1
+        return {
+            "count": 1,
+            "infinite_parameters": 0,
+            "finite_parts": 1,
+        }
 
     print()
     warning(
@@ -210,9 +240,21 @@ def get_parameterized_count(text):
         + ", ".join(f"<{parameter}>" for parameter in parameters)
     )
 
-    # One parameter
     if len(parameters) == 1:
         count = get_parameter_value_count(parameters[0])
+
+        if math.isinf(count):
+            metrics = {
+                "count": math.inf,
+                "infinite_parameters": 1,
+                "finite_parts": 0,
+            }
+        else:
+            metrics = {
+                "count": count,
+                "infinite_parameters": 0,
+                "finite_parts": count,
+            }
 
         print()
         success(
@@ -220,18 +262,22 @@ def get_parameterized_count(text):
             f"{'variation' if count == 1 else 'variations'}"
         )
 
-        return count
+        return metrics
 
-    # Multiple parameters
     independent = get_yes_no(
         "Do these parameters vary independently? [y/n]"
     )
 
     if independent:
-        counts = []
+        counts = [
+            get_parameter_value_count(parameter)
+            for parameter in parameters
+        ]
 
-        for parameter in parameters:
-            counts.append(get_parameter_value_count(parameter))
+        infinite_parameters = sum(
+            1 for count in counts if math.isinf(count)
+        )
+        finite_parts = finite_factor_from_counts(counts)
 
         total = math.prod(counts)
 
@@ -245,7 +291,11 @@ def get_parameterized_count(text):
             "working variations"
         )
 
-        return total
+        return {
+            "count": total,
+            "infinite_parameters": infinite_parameters,
+            "finite_parts": finite_parts if infinite_parameters else total,
+        }
 
     print()
     heading("Dependent parameters")
@@ -267,13 +317,33 @@ def get_parameterized_count(text):
     else:
         count = enumerate_combinations(parameters)
 
+    if math.isinf(count):
+        print()
+        hint(
+            "For infinite families, the program also tracks how many "
+            "parameters are infinitely variable."
+        )
+        infinite_parameters = get_bounded_positive_int(
+            f"How many of these {len(parameters)} parameters have "
+            "infinitely many possible values?",
+            len(parameters),
+        )
+        finite_parts = 0
+    else:
+        infinite_parameters = 0
+        finite_parts = count
+
     print()
     success(
         f"This represents {format_count(count)} working "
         f"{'variation' if count == 1 else 'variations'}"
     )
 
-    return count
+    return {
+        "count": count,
+        "infinite_parameters": infinite_parameters,
+        "finite_parts": finite_parts,
+    }
 
 
 # ------------------------------------------------------------
@@ -283,11 +353,17 @@ def get_parameterized_count(text):
 
 def recalculate_count(item):
     total = item["explanation_parameter_count"]
+    infinite_parameters = item["explanation_infinite_parameters"]
+    finite_parts = item["explanation_finite_parts"]
 
     for variation in item["variations"]:
         total += variation["count"]
+        infinite_parameters += variation["infinite_parameters"]
+        finite_parts += variation["finite_parts"]
 
     item["count"] = total
+    item["infinite_parameters"] = infinite_parameters
+    item["finite_parts"] = finite_parts
 
 
 def make_variation(text):
@@ -295,14 +371,18 @@ def make_variation(text):
 
     if parameters:
         success("Parameterized variation recorded")
-        count = get_parameterized_count(text)
+        metrics = get_parameterized_metrics(text)
     else:
         success("Variation recorded")
-        count = 1
+        metrics = {
+            "count": 1,
+            "infinite_parameters": 0,
+            "finite_parts": 1,
+        }
 
     return {
         "text": text,
-        "count": count,
+        **metrics,
     }
 
 
@@ -319,7 +399,11 @@ def prompt_for_variation(number):
 
 def process_explanation_parameters(explanation):
     if not extract_parameters(explanation):
-        return 0
+        return {
+            "count": 0,
+            "infinite_parameters": 0,
+            "finite_parts": 0,
+        }
 
     print()
     hint(
@@ -327,15 +411,15 @@ def process_explanation_parameters(explanation):
         "Let's count the working variations they represent."
     )
 
-    count = get_parameterized_count(explanation)
+    metrics = get_parameterized_metrics(explanation)
 
     print()
     success(
-        f"Explanation represents {format_count(count)} "
+        f"Explanation represents {format_count(metrics['count'])} "
         "working variations through its parameters"
     )
 
-    return count
+    return metrics
 
 
 def create_explanation_item(explanation, collect_initial_variations=True):
@@ -343,16 +427,23 @@ def create_explanation_item(explanation, collect_initial_variations=True):
         "explanation": explanation,
         "variations": [],
         "explanation_parameter_count": 0,
+        "explanation_infinite_parameters": 0,
+        "explanation_finite_parts": 0,
         "count": 0,
+        "infinite_parameters": 0,
+        "finite_parts": 0,
     }
 
     divider()
     heading("Explanation")
     print(explanation)
 
-    item["explanation_parameter_count"] = process_explanation_parameters(
-        explanation
-    )
+    explanation_metrics = process_explanation_parameters(explanation)
+    item["explanation_parameter_count"] = explanation_metrics["count"]
+    item["explanation_infinite_parameters"] = explanation_metrics[
+        "infinite_parameters"
+    ]
+    item["explanation_finite_parts"] = explanation_metrics["finite_parts"]
 
     if collect_initial_variations:
         if item["explanation_parameter_count"]:
@@ -433,6 +524,21 @@ def collect_additional_variations(item):
         print()
 
 
+def format_variation_metrics(data):
+    if math.isinf(data["count"]):
+        infinite_word = (
+            "parameter"
+            if data["infinite_parameters"] == 1
+            else "parameters"
+        )
+        return (
+            f"infinite, {data['infinite_parameters']} infinite "
+            f"{infinite_word}, {data['finite_parts']} finite parts"
+        )
+
+    return str(data["count"])
+
+
 def print_variations(item):
     if not item["variations"]:
         hint("No additional variations entered.")
@@ -441,7 +547,7 @@ def print_variations(item):
     for index, variation in enumerate(item["variations"], start=1):
         print(
             f"  [{index}] {variation['text']} "
-            f"({format_count(variation['count'])})"
+            f"({format_variation_metrics(variation)})"
         )
 
 
@@ -526,9 +632,12 @@ def edit_explanation(item):
     # The explanation's own parameter count belongs to the explanation text,
     # so recalculate it whenever that text changes. Existing additional
     # variations are preserved.
-    item["explanation_parameter_count"] = process_explanation_parameters(
-        new_text
-    )
+    explanation_metrics = process_explanation_parameters(new_text)
+    item["explanation_parameter_count"] = explanation_metrics["count"]
+    item["explanation_infinite_parameters"] = explanation_metrics[
+        "infinite_parameters"
+    ]
+    item["explanation_finite_parts"] = explanation_metrics["finite_parts"]
     recalculate_count(item)
     success("Explanation updated")
 
@@ -540,8 +649,8 @@ def review_explanation(item):
         print(item["explanation"])
         print()
         print(
-            f"Working variations represented: "
-            f"{format_count(item['count'])}"
+            f"Working variations: "
+            f"{format_variation_metrics(item)}"
         )
 
         if item["explanation_parameter_count"]:
@@ -581,10 +690,23 @@ def review_explanation(item):
 def print_explanation_list(results):
     print()
     for index, item in enumerate(results, start=1):
-        print(
-            f"  [{index}] {item['explanation']} "
-            f"({format_count(item['count'])} working variations)"
-        )
+        if math.isinf(item["count"]):
+            infinite_word = (
+                "parameter"
+                if item["infinite_parameters"] == 1
+                else "parameters"
+            )
+            print(
+                f"  [{index}] {item['explanation']} "
+                f"(infinite working variations, "
+                f"{item['infinite_parameters']} infinite {infinite_word}, "
+                f"{item['finite_parts']} finite parts)"
+            )
+        else:
+            print(
+                f"  [{index}] {item['explanation']} "
+                f"({item['count']} working variations)"
+            )
 
 
 def choose_explanation_index(results, action, allow_cancel=True):
@@ -666,36 +788,54 @@ def final_review(results):
 # ------------------------------------------------------------
 
 
-def show_ranking(results):
-    ranked = sorted(
-        results,
-        key=lambda item: item["count"],
+def ranking_key(item):
+    return (
+        item["count"],
+        item["infinite_parameters"],
+        item["finite_parts"],
     )
+
+
+def show_ranking(results):
+    ranked = sorted(results, key=ranking_key)
 
     divider()
     heading("HARDNESS-TO-VARY RANKING")
 
-    previous_count = None
+    previous_key = None
     rank = 0
 
     for index, item in enumerate(ranked, start=1):
-        count = item["count"]
+        key = ranking_key(item)
 
-        if count != previous_count:
+        if key != previous_key:
             rank = index
-            previous_count = count
+            previous_key = key
 
         print()
         print(f"{BOLD}Rank {rank}{RESET}")
         print(item["explanation"])
 
-        if math.isinf(count):
+        if math.isinf(item["count"]):
             warning("Working variations represented: infinite")
+            print(
+                "Infinitely variable parameters: "
+                f"{item['infinite_parameters']}"
+            )
+            print(
+                "Finite variation parts: "
+                f"{item['finite_parts']}"
+            )
         else:
-            print(f"Working variations represented: {count}")
+            print(f"Working variations represented: {item['count']}")
 
     print()
     hint("Fewer working variations = harder to vary.")
+    hint(
+        "For infinite totals, fewer infinitely-variable parameters "
+        "ranks higher; remaining ties are broken by fewer finite "
+        "variation parts."
+    )
 
     if len(ranked) == 2:
         first = ranked[0]
@@ -704,7 +844,7 @@ def show_ranking(results):
         print()
         heading("Result")
 
-        if first["count"] == second["count"]:
+        if ranking_key(first) == ranking_key(second):
             print(
                 f"{YELLOW}The two explanations are equally "
                 f"hard to vary.{RESET}"
